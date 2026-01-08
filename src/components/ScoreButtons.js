@@ -55,6 +55,8 @@ export default function ScoreButtons({ onAction }) {
     }
   }
 
+
+
   function handleAction(action, e) {
   playClickSound();
 
@@ -131,9 +133,8 @@ export default function ScoreButtons({ onAction }) {
           ↙️ Undo
         </button>
 
-        <button className="px-4 py-2 rounded-md bg-emerald-600 text-white">
-          🔚 End Inning
-        </button>
+     
+
       </div>
 
       {/* INLINE SHAKE ANIMATION */}

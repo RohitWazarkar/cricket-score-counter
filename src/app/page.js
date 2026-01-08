@@ -13,12 +13,29 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useRouter } from "next/navigation";
 
+import AlertBox from "@/components/AlertBox";
+
+
 
 const initialState = {
   currentTeam: "A",
-  teamA: { name: "Team A", players: [] },
-  teamB: { name: "Team B", players: [] }
+   totalOvers: 0, 
+   InningsNo : 1 , 
+  teamA: {
+    name: "Team A",
+    isInningsDone: false,
+    players: []
+  },
+  teamB: {
+    name: "Team B",
+    isInningsDone: false,
+    players: []
+  }
 };
+
+
+
+
 
 export default function Home() {
   const [showMatchForm, setShowMatchForm] = useState(false);
@@ -38,6 +55,27 @@ const [selectedBowlerId, setSelectedBowlerId] = useState(null);
 const [currentBowler, setCurrentBowler] = useState(null);
 
 const router = useRouter();
+
+const [alertData, setAlertData] = useState({
+  show: false,
+  message: "",
+  mode: "warning"
+});
+
+
+function showAlert(message, mode = "warning") {
+  setAlertData({
+    show: true,
+    message,
+    mode
+  });
+}
+
+function closeAlert() {
+  setAlertData(prev => ({ ...prev, show: false }));
+}
+
+
 
 
 
@@ -63,6 +101,9 @@ const oppositeTeam =
 
     const savedMatch = localStorage.getItem("cricket-match");
     const savedTime = localStorage.getItem("inningsStartTime");
+
+    // showAlert("Welcome to our app 😊", "success");
+
 
     if (savedTime) setInningsStartTime(savedTime);
 
@@ -96,6 +137,34 @@ const oppositeTeam =
     const ball = (balls % 6) + 1;
     return Number(`${over}.${ball}`);
   }
+
+
+  
+  function endInnings() {
+  const teamKey = match.currentTeam === "A" ? "teamA" : "teamB";
+  const otherTeamKey = teamKey === "teamA" ? "teamB" : "teamA";
+
+  match.InningsNo = 2 ; 
+
+  // Prevent double end
+  if (match[teamKey].isInningsDone) {
+   
+    showAlert("This innings is already completed", "warning");
+    return;
+  }
+
+  setMatch({
+    ...match,
+    [teamKey]: {
+      ...match[teamKey],
+      isInningsDone: true
+    },
+    currentTeam: teamKey === "teamA" ? "B" : "A"
+  });
+
+  setStrikerId(null);
+}
+
 
 
 
@@ -137,6 +206,7 @@ const oppositeTeam =
       history: [],
       ballLog: []
     };
+    match.InningsNo = 1 ; 
 
     setMatch({
       ...match,
@@ -347,16 +417,38 @@ function switchStrike(players, strikerId, setStrikerId) {
 
 function handleScoreAction(action) {
   const teamKey = match.currentTeam === "A" ? "teamA" : "teamB";
+
+
+  if (match[teamKey].isInningsDone) {
+    //alert("This innings is completed. Please switch to next team.");
+    showAlert("This innings is completed. Please switch to next team.", "warning");
+    return;
+  }
+
+
+  if(teamBalls  > match.totalOvers * 6 ){
+   // alert('Cant add runs now need to switch the team !') ; 
+    showAlert("Cant add runs now need to switch the team !", "warning");
+      const btn = document.getElementById("TeamSwitchButton");
+  btn?.focus();
+    return ; 
+  }
+
+
+
   const players = [...match[teamKey].players];
 
   const activeBatsmen = players.filter(p => !p.isOut);
   if (activeBatsmen.length < 2) {
-    alert("Two batsmen are required to continue the match");
+    // alert("Two batsmen are required to continue the match");
+    showAlert("Two batsmen are required to continue the match", "warning");
+
     return;
   }
 
   if (!strikerId) {
-    alert("Please select a striker");
+    // alert("Please select a striker");
+    showAlert("Please select a striker", "warning");
     return;
   }
 
@@ -401,10 +493,32 @@ function handleScoreAction(action) {
     striker.history.push({ type: "Wicket", runs: 0, countsBall: true });
   }
 
-  else if (action === "Wide" || action === "No Ball") {
-    striker.runs += wideRunsAllowed ? 1 : 0;
-    striker.history.push({ type: action, runs: 1, countsBall: false });
+
+
+ else if (action === "Wide" || action === "No Ball") {
+  const input = prompt(
+    `${action} runs? (Enter 1, 2, 3, 4, 5, or 6)  \n Can Set Strike Manually !`,
+    "1"
+  );
+
+  const runs = Number(input);
+
+  if (![1, 2, 3, 4, 5, 6].includes(runs)) {
+    //alert("Invalid runs. Please enter 1, 2, 3, 4, 5 or 6.");
+    showAlert("Invalid runs. Please enter 1, 2, 3, 4, 5 or 6.", "danger");
+    return;
   }
+
+  striker.runs += runs;
+  teamRuns += runs;
+
+  striker.history.push({
+    type: action,
+    runs,
+    countsBall: false
+  });
+}
+
 
 
 
@@ -451,7 +565,9 @@ function handleScoreAction(action) {
     }
   });
 
-  alert('Undo Status Successfully ! \n  Please Select Strike Manually !') ;
+ // alert('Undo Status Successfully ! \n  Please Select Strike Manually !') ;
+  showAlert('Undo Status Successfully ! \n  Please Select Strike Manually !','success') ;
+
 
   return;
 }
@@ -485,10 +601,14 @@ function handleScoreAction(action) {
   }
 
   setMatch({ ...match, [teamKey]: { ...match[teamKey], players } });
+
+
+
+  
 }
 
 
-  const teamRuns = activeTeam.players.reduce((sum, p) => sum + p.runs, 0);
+  var teamRuns = activeTeam.players.reduce((sum, p) => sum + p.runs, 0);
   const teamWickets = activeTeam.players.filter(p => p.isOut).length;
   const teamBalls = activeTeam.players.reduce((sum, p) => sum + p.balls, 0);
 
@@ -573,10 +693,39 @@ function handleScoreAction(action) {
         />
       </div>
 
+          {/* Overs */}
+<div>
+  <label className="block text-sm font-semibold text-gray-700 mb-1">
+    Total Overs
+  </label>
+  <input
+    type="number"
+    min="1"
+    placeholder="Enter overs (e.g. 20)"
+    className="w-full border border-blue-300 px-3 py-2 rounded-lg
+               text-gray-900
+               focus:outline-none focus:ring-2 focus:ring-blue-500"
+    value={match.totalOvers || ""}
+    onChange={e =>
+      setMatch(m => ({
+        ...m,
+        totalOvers: Number(e.target.value)
+      }))
+    }
+  />
+</div>
+
+
+
       {/* Start Button */}
       <button
         onClick={() => setShowMatchForm(false)}
-        disabled={!match.teamA.name || !match.teamB.name}
+       disabled={
+    !match.teamA.name ||
+    !match.teamB.name ||
+    !match.totalOvers ||
+    match.totalOvers <= 0
+  }
         className="w-full py-2.5 rounded-xl font-semibold
                    bg-blue-600 text-white tracking-wide
                    hover:bg-blue-700 active:scale-95
@@ -750,6 +899,19 @@ function handleScoreAction(action) {
   📊 View Full Match Summary
 </button>
 
+ <button
+  onClick={endInnings}
+  className="w-full px-4 py-3 bg-blue-50 text-blue-600 rounded-xl"
+>
+  🔚 End Of Inning 🔚
+</button>
+
+
+
+  
+
+
+
 
 
       </div>
@@ -789,6 +951,8 @@ function handleScoreAction(action) {
   balls={teamBalls}
   players={activeTeam.players}
   strikerId={strikerId}
+  totalOvers={match.totalOvers} 
+  InningsNo ={match.InningsNo }
   onSwitch={() =>
     setMatch({
       ...match,
@@ -796,6 +960,15 @@ function handleScoreAction(action) {
     })
   }
 />
+
+<div className="flex justify-center mt-2">
+  <button
+    onClick={() => setShowAddPlayer(true)}
+    className="px-4 py-2 bg-green-700 text-white rounded-md"
+  >
+    ➕ Add Player
+  </button>
+</div>
 
 
 
@@ -816,7 +989,7 @@ function handleScoreAction(action) {
 {showAddPlayer && (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
     <div className="bg-white rounded-xl w-80 p-5 shadow-xl">
-      <h2 className="text-xl font-bold mb-4 text-center text-slate-800">
+      <h2 className="text-xl font-bold text-center text-slate-800">
         ➕ Add Player
       </h2>
 
@@ -871,14 +1044,7 @@ function handleScoreAction(action) {
 
 
 
-<div className="flex justify-center mt-4">
-  <button
-    onClick={() => setShowAddPlayer(true)}
-    className="px-4 py-2 bg-green-600 text-white rounded-md"
-  >
-    + Add Player
-  </button>
-</div>
+
 
 
 
@@ -887,6 +1053,16 @@ function handleScoreAction(action) {
 
       {/* Score Buttons */}
      <ScoreButtons onAction={handleScoreAction} />
+
+      
+
+{alertData.show && (
+  <AlertBox
+    message={alertData.message}
+    mode={alertData.mode}
+    onClose={closeAlert}
+  />
+)}
 
 
     

@@ -10,7 +10,9 @@ export default function TeamSwitcher({
   balls,
   players = [],
   strikerId,
-  onSwitch
+  onSwitch , 
+  totalOvers , 
+  InningsNo
 }) {
   const overs = `${Math.floor(balls / 6)}.${balls % 6}`;
 
@@ -32,12 +34,40 @@ export default function TeamSwitcher({
           <div className="font-semibold text-lg">
             {currentTeam}
           </div>
-          <div className="text-sm text-blue-700">
-            {runs}/{wickets} ({overs})
-          </div>
+        <div className="flex items-center justify-center gap-3
+                bg-white rounded-xl shadow-sm
+                px-4 py-2 mt-2
+                border border-blue-100">
+
+  {/* Score */}
+  <span className="text-lg font-bold text-blue-800">
+    {runs}
+    <span className="text-gray-500 text-sm font-medium">/{wickets}</span>
+  </span>
+
+  {/* Divider */}
+  <span className="text-gray-300">|</span>
+
+  {/* Overs */}
+  <span className="text-sm font-semibold text-gray-700">
+    {overs}
+    <span className="text-gray-400 font-normal"> / {totalOvers} ov</span>
+  </span>
+
+  {/* Divider */}
+  <span className="text-gray-300">|</span>
+
+  {/* Innings */}
+  <span className="text-sm font-semibold text-emerald-600">
+    {InningsNo === 1 ? "1st Innings" : "2nd Innings"}
+  </span>
+
+</div>
+
         </div>
 
         <button
+        id="TeamSwitchButton"
           onClick={onSwitch}
           className="bg-blue-600 hover:bg-blue-700
                      text-white px-4 py-1 rounded transition"
