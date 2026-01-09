@@ -145,6 +145,7 @@ const oppositeTeam =
   const otherTeamKey = teamKey === "teamA" ? "teamB" : "teamA";
 
   match.InningsNo = 2 ; 
+  
 
   // Prevent double end
   if (match[teamKey].isInningsDone) {
@@ -615,6 +616,17 @@ function handleScoreAction(action) {
 
   useEffect(() => {
   if (!activeTeam.players.length) return;
+
+
+  if(teamBalls / 6  == match.totalOvers){
+    showAlert('Innings has been over \n Please switch the team !');
+       setShowBowlerForm(false);
+      return ;  ; 
+  }
+
+   if (teamBalls == 1 ) {
+    setShowBowlerForm(true);
+  }
 
   if (teamBalls > 0 && teamBalls % 6 === 0) {
     setShowBowlerForm(true);
